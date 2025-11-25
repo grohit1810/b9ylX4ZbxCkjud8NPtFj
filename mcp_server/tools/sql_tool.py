@@ -41,7 +41,7 @@ class SQLQueryTool:
         logger.debug(f"SQL Tool execute: {arguments}")
 
         try:
-            result = self.handler.execute_query(
+            result = await self.handler.execute_query(
                 genre=arguments.get("genre"),
                 year=arguments.get("year"),
                 year_min=arguments.get("year_min"),

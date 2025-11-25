@@ -16,6 +16,9 @@ from mcp.types import TextContent, CallToolResult
 from mcp_server.tools.sql_tool import SQLQueryTool
 from mcp_server.tools.vector_tool import VectorQueryTool
 
+from starlette.responses import JSONResponse
+from starlette.routing import Route
+
 logger = get_logger(__name__)
 
 mcp = FastMCP(MCP_SERVER_CONFIG['mcp_server_name'])
@@ -149,6 +152,49 @@ async def query_vector_db(
 
 # Build the ASGI app (path configured above)
 app = mcp.streamable_http_app()
+
+async def health_check(request):
+    """Health check endpoint for MCP server."""
+    health_status = {
+        "status": "healthy",
+        "service": "Movie Recommender MCP Server",
+        "tools": {
+            "sql_tool": "initialized" if _sql_tool else "not_initialized",
+            "vector_tool": "initialized" if _vector_tool else "not_initialized",
+        }
+    }
+    
+    # Test SQL tool connection
+    try:
+        test_result = await _sql_tool.execute({
+            "genre": "Action",
+            "offset": 0,
+            "limit": 1,
+            "order_by": "rating",
+            "order_dir": "DESC",
+            "response_format": "summary"
+        })
+        health_status["tools"]["sql_tool"] = "connected"
+    except Exception as e:
+        logger.error(f"SQL tool health check failed: {e}")
+        health_status["tools"]["sql_tool"] = "error"
+        health_status["status"] = "degraded"
+    
+    # Test Vector tool connection
+    try:
+        test_result = await _vector_tool.execute({
+            "query_text": "test health check query",
+            "top_k": 1
+        })
+        health_status["tools"]["vector_tool"] = "connected"
+    except Exception as e:
+        logger.error(f"Vector tool health check failed: {e}")
+        health_status["tools"]["vector_tool"] = "error"
+        health_status["status"] = "degraded"
+    
+    return JSONResponse(content=health_status)
+
+app.routes.append(Route("/health", health_check, methods=["GET"]))
 
 def main():
     logger.info(

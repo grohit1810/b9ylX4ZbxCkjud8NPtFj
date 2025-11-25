@@ -19,7 +19,7 @@ class SQLQueryHandler:
                                    cache_size=MCP_SQL_TOOL_CONFIG["default_cache_size"])
         logger.info("SQL Query Handler initialized")
 
-    def execute_query(
+    async def execute_query(
         self,
         genre: Optional[str],
         year: Optional[int],
@@ -61,7 +61,7 @@ class SQLQueryHandler:
                     f"cast={cast}, director={director}, limit={limit}")
 
         # Execute query
-        movies = self.client.query_movies(
+        movies = await self.client.query_movies(
             genre=genre,
             year=year,
             year_min=year_min,
