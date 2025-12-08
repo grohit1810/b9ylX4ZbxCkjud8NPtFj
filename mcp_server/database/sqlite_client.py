@@ -3,7 +3,7 @@ SQLite database client for structured queries with LRU caching.
 """
 import os
 import json
-import sqlite3
+import aiosqlite
 import hashlib
 from pathlib import Path
 from collections import OrderedDict
@@ -51,12 +51,6 @@ class SQLiteClient:
             logger.info(f"Database updated detected: Clearing cache")
             self._cache.clear()
             self._db_mtime = current_mtime
-    
-    def _get_connection(self):
-        """Get database connection."""
-        conn = sqlite3.connect(str(self.db_path))
-        conn.row_factory = sqlite3.Row
-        return conn
     
     def _normalize_cache_value(self, value: Any) -> Any:
         """
@@ -126,7 +120,7 @@ class SQLiteClient:
         self._cache.clear()
         logger.info("SQLite cache cleared")
     
-    def query_movies(
+    async def query_movies(
         self,
         genre: Optional[str],
         year: Optional[int],
@@ -280,39 +274,32 @@ class SQLiteClient:
         
         # ========== Execute Query ==========
         
-        conn = self._get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute(full_query, query_params)
-            rows = cursor.fetchall()
-            
-            results = []
-            for row in rows:
-                movie = dict(row)
-                movie.pop("genre_matches", None)
-                movie.pop("cast_matches", None)
-                results.append(movie)
-            
-            logger.debug(f"Cache MISS: Executed query, {len(results)} results (cache_size={len(self._cache)})")
-            
-            # Cache result with LRU eviction
-            self._put_in_cache(cache_key, results)
-            
-            return results
-            
-        finally:
-            conn.close()
+        async with aiosqlite.connect(self.db_path) as conn:
+            conn.row_factory = aiosqlite.Row
+            async with conn.execute(full_query, query_params) as cursor:
+                rows = await cursor.fetchall()
+                
+                results = []
+                for row in rows:
+                    movie = dict(row)
+                    movie.pop("genre_matches", None)
+                    movie.pop("cast_matches", None)
+                    results.append(movie)
+                
+                logger.debug(f"Cache MISS: Executed query, {len(results)} results (cache_size={len(self._cache)})")
+                
+                # Cache result with LRU eviction
+                self._put_in_cache(cache_key, results)
+                
+                return results
     
-    def get_movie_by_title(self, title: str) -> Optional[Dict[str, Any]]:
+    async def get_movie_by_title(self, title: str) -> Optional[Dict[str, Any]]:
         """Get specific movie by exact title."""
-        conn = self._get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM movies WHERE title = ?", (title,))
-            row = cursor.fetchone()
-            return dict(row) if row else None
-        finally:
-            conn.close()
+        async with aiosqlite.connect(self.db_path) as conn:
+            conn.row_factory = aiosqlite.Row
+            async with conn.execute("SELECT * FROM movies WHERE title = ?", (title,)) as cursor:
+                row = await cursor.fetchone()
+                return dict(row) if row else None
 
     def parse_json_field(self, field: str) -> List[str]:
         """Parse JSON field to list of strings."""

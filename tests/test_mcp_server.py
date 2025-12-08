@@ -29,12 +29,13 @@ def vector_client():
     )
 
 
+@pytest.mark.asyncio
 class TestSQLQueries:
     """Test SQL database queries with various parameters."""
 
-    def test_single_genre(self, sql_client):
+    async def test_single_genre(self, sql_client):
         """Test query with single genre."""
-        results = sql_client.query_movies(
+        results = await sql_client.query_movies(
             genre="Romance",
             year=None,
             year_min=None,
@@ -53,9 +54,9 @@ class TestSQLQueries:
             # Check structure of first result
             assert "title" in results[0]
 
-    def test_multiple_genres_comma_separated(self, sql_client):
+    async def test_multiple_genres_comma_separated(self, sql_client):
         """Test query with multiple genres (comma-separated)."""
-        results = sql_client.query_movies(
+        results = await sql_client.query_movies(
             genre="Romance, Thriller",
             year=None,
             year_min=None,
@@ -71,9 +72,9 @@ class TestSQLQueries:
         assert isinstance(results, list)
         assert len(results) <= 10
 
-    def test_year_exact_filter(self, sql_client):
+    async def test_year_exact_filter(self, sql_client):
         """Test exact year filter."""
-        results = sql_client.query_movies(
+        results = await sql_client.query_movies(
             genre=None,
             year=2015,
             year_min=None,
@@ -90,9 +91,9 @@ class TestSQLQueries:
         if results:
             assert results[0].get("year") == 2015
 
-    def test_year_range_filter(self, sql_client):
+    async def test_year_range_filter(self, sql_client):
         """Test year range filter."""
-        results = sql_client.query_movies(
+        results = await sql_client.query_movies(
             genre=None,
             year=None,
             year_min=2010,
@@ -112,9 +113,9 @@ class TestSQLQueries:
                 if year:
                     assert 2010 <= year <= 2020
 
-    def test_cast_filter(self, sql_client):
+    async def test_cast_filter(self, sql_client):
         """Test cast member filter."""
-        results = sql_client.query_movies(
+        results = await sql_client.query_movies(
             genre=None,
             year=None,
             year_min=None,
@@ -133,9 +134,9 @@ class TestSQLQueries:
             first_result = results[0]
             assert "cast" in first_result
 
-    def test_director_filter(self, sql_client):
+    async def test_director_filter(self, sql_client):
         """Test director filter."""
-        results = sql_client.query_movies(
+        results = await sql_client.query_movies(
             genre=None,
             year=None,
             year_min=None,
@@ -152,9 +153,9 @@ class TestSQLQueries:
         if results:
             assert "director" in results[0]
 
-    def test_title_search(self, sql_client):
+    async def test_title_search(self, sql_client):
         """Test title partial match."""
-        results = sql_client.query_movies(
+        results = await sql_client.query_movies(
             genre=None,
             year=None,
             year_min=None,
@@ -172,9 +173,9 @@ class TestSQLQueries:
             # Title should contain "Inception"
             assert "Inception" in results[0]["title"]
 
-    def test_combined_filters(self, sql_client):
+    async def test_combined_filters(self, sql_client):
         """Test multiple filters combined."""
-        results = sql_client.query_movies(
+        results = await sql_client.query_movies(
             genre="Action",
             year=None,
             year_min=2010,
@@ -190,9 +191,9 @@ class TestSQLQueries:
         assert isinstance(results, list)
         assert len(results) <= 5
 
-    def test_pagination(self, sql_client):
+    async def test_pagination(self, sql_client):
         """Test pagination with offset."""
-        page1 = sql_client.query_movies(
+        page1 = await sql_client.query_movies(
             genre="Action",
             year=None,
             year_min=None,
@@ -205,7 +206,7 @@ class TestSQLQueries:
             order_by="title",
             order_dir="ASC"
         )
-        page2 = sql_client.query_movies(
+        page2 = await sql_client.query_movies(
             genre="Action",
             year=None,
             year_min=None,
@@ -226,9 +227,9 @@ class TestSQLQueries:
         if len(page1) == 5 and len(page2) > 0:
             assert page1[0]["title"] != page2[0]["title"]
 
-    def test_order_by_rating(self, sql_client):
+    async def test_order_by_rating(self, sql_client):
         """Test ordering by rating."""
-        results = sql_client.query_movies(
+        results = await sql_client.query_movies(
             genre="Action",
             year=None,
             year_min=None,
@@ -248,9 +249,9 @@ class TestSQLQueries:
             ratings = [r.get("rating", 0) for r in results]
             assert ratings == sorted(ratings, reverse=True)
 
-    def test_no_results(self, sql_client):
+    async def test_no_results(self, sql_client):
         """Test query with no matching results."""
-        results = sql_client.query_movies(
+        results = await sql_client.query_movies(
             genre="NonexistentGenre",
             year=1800,
             year_min=None,
@@ -266,9 +267,9 @@ class TestSQLQueries:
         assert isinstance(results, list)
         assert len(results) == 0
 
-    def test_limit_constraint(self, sql_client):
+    async def test_limit_constraint(self, sql_client):
         """Test limit parameter is respected."""
-        results = sql_client.query_movies(
+        results = await sql_client.query_movies(
             genre="Drama",
             year=None,
             year_min=None,
@@ -383,13 +384,14 @@ class TestVectorSearch:
         assert isinstance(results, list)
 
 
+@pytest.mark.asyncio
 class TestCaching:
     """Test caching behavior."""
 
-    def test_sql_cache_hit(self, sql_client):
+    async def test_sql_cache_hit(self, sql_client):
         """Test SQL query caching."""
         # First query (cache miss)
-        results1 = sql_client.query_movies(
+        results1 = await sql_client.query_movies(
             genre="Drama",
             year=None,
             year_min=None,
@@ -404,7 +406,7 @@ class TestCaching:
         )
         
         # Second identical query (should be cache hit)
-        results2 = sql_client.query_movies(
+        results2 = await sql_client.query_movies(
             genre="Drama",
             year=None,
             year_min=None,
@@ -431,9 +433,9 @@ class TestCaching:
             # Compare first result
             assert results1[0][1] == results2[0][1]  # Same similarity score
 
-    def test_cache_different_params(self, sql_client):
+    async def test_cache_different_params(self, sql_client):
         """Test cache doesn't mix different parameters."""
-        results1 = sql_client.query_movies(
+        results1 = await sql_client.query_movies(
             genre="Action",
             year=None,
             year_min=None,
@@ -446,7 +448,7 @@ class TestCaching:
             order_by="title",
             order_dir="ASC"
         )
-        results2 = sql_client.query_movies(
+        results2 = await sql_client.query_movies(
             genre="Comedy",
             year=None,
             year_min=None,
@@ -464,10 +466,10 @@ class TestCaching:
         if results1 and results2:
             assert results1 != results2
 
-    def test_cache_clear(self, sql_client):
+    async def test_cache_clear(self, sql_client):
         """Test cache clearing."""
         sql_client.clear_cache()
-        results = sql_client.query_movies(
+        results = await sql_client.query_movies(
             genre="Comedy",
             year=None,
             year_min=None,

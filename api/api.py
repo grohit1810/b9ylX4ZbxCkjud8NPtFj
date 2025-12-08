@@ -154,6 +154,10 @@ async def lifespan(app: FastAPI):
     # Shutdown
     try:
         logger.info("Shutting down Movie Recommender Chatbot API")
+
+        if movie_agent:
+            await movie_agent.close()
+            logger.info("Movie agent closed")
         
         if redis_client:
             await close_redis(redis_client)
