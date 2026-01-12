@@ -21,8 +21,8 @@ The system has three core flows:
 ### One-Time Setup
 ```bash
 # 1. Clone repo
-git clone https://github.com/grohit1810/b9ylX4ZbxCkjud8NPtFj.git
-cd b9ylX4ZbxCkjud8NPtFj
+git clone https://github.com/movie-recommender-agent.git
+cd movie-recommender-agent
 
 # 2. Setup Python environment
 python3.11 -m venv .venv
